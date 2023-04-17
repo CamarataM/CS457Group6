@@ -3,34 +3,6 @@
 from math import sqrt
 from random import seed
 from random import randrange
-from csv import reader
-
-# Load a CSV file
-def load_csv(filename):
-	dataset = list()
-	with open(filename, 'r') as file:
-		csv_reader = reader(file)
-		for row in csv_reader:
-			if not row:
-				continue
-			dataset.append(row)
-	return dataset
-
-# Convert string column to float
-def str_column_to_float(dataset, column):
-	for row in dataset:
-		row[column] = float(row[column].strip())
-
-# Convert string column to integer
-def str_column_to_int(dataset, column):
-	class_values = [row[column] for row in dataset]
-	unique = set(class_values)
-	lookup = dict()
-	for i, value in enumerate(unique):
-		lookup[value] = i
-	for row in dataset:
-		row[column] = lookup[row[column]]
-	return lookup
 
 # Split a dataset into k folds
 def cross_validation_split(dataset, n_folds):
@@ -43,6 +15,7 @@ def cross_validation_split(dataset, n_folds):
 			index = randrange(len(dataset_copy))
 			fold.append(dataset_copy.pop(index))
 		dataset_split.append(fold)
+
 	return dataset_split
 
 # Calculate accuracy percentage
@@ -51,6 +24,7 @@ def accuracy_metric(actual, predicted):
 	for i in range(len(actual)):
 		if actual[i] == predicted[i]:
 			correct += 1
+
 	return correct / float(len(actual)) * 100.0
 
 # Evaluate an algorithm using a cross validation split
@@ -70,6 +44,7 @@ def evaluate_algorithm(dataset, algorithm, n_folds, *args):
 		actual = [row[-1] for row in fold]
 		accuracy = accuracy_metric(actual, predicted)
 		scores.append(accuracy)
+
 	return scores
 
 # Make a prediction with weights
@@ -77,6 +52,7 @@ def predict(row, weights):
 	activation = weights[0]
 	for i in range(len(row)-1):
 		activation += weights[i + 1] * row[i]
+
 	return 1.0 if activation >= 0.0 else 0.0
 
 # Estimate Perceptron weights using stochastic gradient descent
@@ -89,15 +65,21 @@ def train_weights(train, l_rate, n_epoch):
 			weights[0] = weights[0] + l_rate * error
 			for i in range(len(row)-1):
 				weights[i + 1] = weights[i + 1] + l_rate * error * row[i]
+
 	return weights
 
 # Perceptron Algorithm With Stochastic Gradient Descent
 def perceptron(train, test, l_rate, n_epoch):
 	predictions = list()
 	weights = train_weights(train, l_rate, n_epoch)
+
+	# Print the weights at the current Perceptron iteration.
+	print("Weights: " + str(weights))
+
 	for row in test:
 		prediction = predict(row, weights)
 		predictions.append(prediction)
+
 	return(predictions)
 
 # Creates a linear array which contains either an 'I' or an 'L' depending on if 'l_tails' is greater than 0. 'left_shift' will shift the starting point for the 'I' or 'L' either left for negative values or right for positive values.
@@ -125,6 +107,7 @@ def generate_dataset(width, l_tails = 0, left_shift = 0):
 
 	return dataset
 
+# Prints a dataset matrix in a more human-readable form.
 def print_dataset_matrix_form(dataset):
 	current_string = ""
 	wrap_modulus = int(sqrt(len(dataset) - 1))
@@ -137,22 +120,33 @@ def print_dataset_matrix_form(dataset):
 
 	print(current_string)
 
-# Test the Perceptron algorithm on the sonar dataset
-# seed(1)
-# # load and prepare data
-# filename = 'sonar.all-data.csv'
-# dataset = load_csv(filename)
-# for i in range(len(dataset[0]) - 1):
-# 	str_column_to_float(dataset, i)
-# # convert string class to integers
-# str_column_to_int(dataset, len(dataset[0])-1)
-# # evaluate algorithm
-# n_folds = 3
-# l_rate = 0.01
-# n_epoch = 500
-# scores = evaluate_algorithm(dataset, perceptron, n_folds, l_rate, n_epoch)
-# print('Scores: %s' % scores)
-# print('Mean Accuracy: %.3f%%' % (sum(scores)/float(len(scores))))
+seed(1)
 
-# print(str(generate_dataset(5, 2)))
-print_dataset_matrix_form(generate_dataset(5, 1, 0))
+
+# Produced the greatest result with just plugging in random numbers for a bit. Anything less than 50 will produce about 80% accuracy.
+number_of_folds = 90
+
+learning_rate = 0.01
+
+# TODO: Describe what this actually controls, not sure yet.
+number_of_epochs = 500
+
+matrix_width = 5
+
+dataset = []
+for i in range(100):
+	# Will randomly generate whether the dataset produced will be an 'I' or an 'L' by setting the amount of tails for the matrix to '0' or '1' respectively.
+	is_l = randrange(0, 2)
+
+	# Generate a new dataset with a random shift between 0 and 5.
+	new_dataset_matrix = generate_dataset(matrix_width, is_l, randrange(0, 5))
+	# Append to the end whether the resulting dataset is an 'I' or an 'L', required for the Perceptron to check whether the produced output was correct or not.
+	new_dataset_matrix.append(is_l)
+
+	# Append the new dataset to the dataset list.
+	dataset.append(new_dataset_matrix)
+
+# Evaluate the Perceptron algorithm passing in the generated dataset and the various parameters related to the Perceptron.
+scores = evaluate_algorithm(dataset, perceptron, number_of_folds, learning_rate, number_of_epochs)
+print('Scores: %s' % scores)
+print('Mean Accuracy: %.3f%%' % (sum(scores) / float(len(scores))))
