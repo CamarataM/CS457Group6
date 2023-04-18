@@ -123,12 +123,13 @@ def print_dataset_matrix_form(dataset : List[int]):
 
 random.seed(1)
 
-# Produced the greatest result with just plugging in random numbers for a bit. Anything less than 50 will produce about 80% accuracy.
-number_of_folds = 100
+# Determines how many pools the dataset is broken into, with the first being considered the "training" dataset.
+number_of_folds = 3
 
+# Determines how fast the Perceptron will adjust the weights.
 learning_rate = 0.01
 
-# TODO: Describe what this actually controls, not sure yet.
+# Controls how many times the Perceptron should be ran over a specific dataset.
 number_of_epochs = 500
 
 # Controls the diameter (width and height) of the dataset matrices.
