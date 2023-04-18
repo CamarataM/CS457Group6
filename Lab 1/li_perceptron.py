@@ -132,16 +132,37 @@ learning_rate = 0.01
 number_of_epochs = 500
 
 matrix_width = 5
+dataset_size = 100
+verify_l_shape = True
 
 dataset = []
-for i in range(100):
+for _ in range(dataset_size):
 	# Will randomly generate whether the dataset produced will be an 'I' or an 'L' by setting the amount of tails for the matrix to '0' or '1' respectively.
-	is_l = randrange(0, 2)
+	l_tails = randrange(0, 2)
+	is_l = l_tails > 0
 
-	# Generate a new dataset with a random shift between 0 and 5.
-	new_dataset_matrix = generate_dataset(matrix_width, is_l, randrange(0, 5))
+	max_shift = matrix_width
+
+	# If the matrix is an 'L' shape, the maximum shift we can do is the width of the matrix - 1, as anything more will cut the tail off.
+	if is_l:
+		max_shift = matrix_width - 1
+
+	# Generate a new dataset with a random shift between 0 and the max shift variable.
+	new_dataset_matrix = generate_dataset(matrix_width, l_tails, randrange(0, max_shift))
+
+	if verify_l_shape and is_l:
+		counted_l_tails = 0
+		for i in range(len(new_dataset_matrix)):
+			# Count the amount of 'L' tails the matrix list has. If this is equal to 0, then we have a malformed dataset array for the 'L' shape.
+			if new_dataset_matrix[i] == 1 and i + 1 < len(new_dataset_matrix) and new_dataset_matrix[i + 1] == 1:
+				counted_l_tails += 1
+
+		# If the counted 'L' tails is not equal to the expected generated value, print an error and exit the program.
+		if counted_l_tails != l_tails:
+			raise Exception("Invalid 'L' dataset array, counted 'L' tails not equal to generated value (Counted: " + str(counted_l_tails) + ", Expected: " + str(l_tails) + "). Dataset: " + str(new_dataset_matrix))
+
 	# Append to the end whether the resulting dataset is an 'I' or an 'L', required for the Perceptron to check whether the produced output was correct or not.
-	new_dataset_matrix.append(is_l)
+	new_dataset_matrix.append(1 if is_l else 0)
 
 	# Append the new dataset to the dataset list.
 	dataset.append(new_dataset_matrix)
