@@ -73,8 +73,9 @@ def perceptron(train, test, l_rate, n_epoch):
 	predictions = list()
 	weights = train_weights(train, l_rate, n_epoch)
 
-	# Print the weights at the current Perceptron iteration.
-	print("Weights: " + str(weights))
+	if print_weights:
+		# Print the weights of the current Perceptron iteration.
+		print("Weights: " + str(weights))
 
 	for row in test:
 		prediction = predict(row, weights)
@@ -138,6 +139,8 @@ verify_l_shape = True
 
 # Controls whether dataset order is shuffled or not.
 shuffle_dataset = True
+
+print_weights = False
 
 # Set which value corresponds to which matrices for the truth values.
 I_MATRIX_TRUTH_VALUE = 0
@@ -204,8 +207,47 @@ def generate_minimal_complete_dataset():
 
 	return dataset
 
+# Will attempt to find the optimal dataset size given an optimal accuracy threshold which much be matched or exceeded, the amount of times to check a dataset for accuracy validity, and a minimum and maximum dataset size.
+def find_minimal_random_dataset_size(optimal_accuracy_threshold = 0.99, accuracy_check_passes = 1, minimum_dataset_size = 10, maximum_dataset_size = 100):
+	current_dataset_size = minimum_dataset_size
+	accuracy_check_passed = 0
+
+	# Continue checking new dataset sizes while the current dataset size is less than or equal to the maximum dataset size.
+	while current_dataset_size <= maximum_dataset_size:
+		# Generate and evaluate the current dataset.
+		dataset = generate_random_dataset(current_dataset_size)
+		scores = evaluate_algorithm(dataset, perceptron, min(len(dataset), number_of_folds), learning_rate, number_of_epochs)
+
+		# Calculate the accuracy of the weights.
+		accuracy = sum(scores) / float(len(scores)) / 100
+
+		# Check if the accuracy of the current weights is greater than or equal to the optimal accuracy threshold...
+		if accuracy >= optimal_accuracy_threshold:
+			# ... if greater than or equal than the accuracy threshold, increment the check passes.
+			accuracy_check_passed += 1
+
+			if accuracy_check_passes > 1:
+				print(str(current_dataset_size) + " passed an accuracy check. " + str(accuracy_check_passed) + "/" + str(accuracy_check_passes) + " successful passes.")
+
+			# If we passed the required amount of accuracy check passes, return the found "optimal" size.
+			if accuracy_check_passed >= accuracy_check_passes:
+				return current_dataset_size
+		else:
+			# ...else if we failed an accuracy check, print a message if the current dataset size had passes already, incrementing the current dataset size.
+			if accuracy_check_passed > 0:
+				print(str(current_dataset_size) + " failed an accuracy check. Resetting passes.")
+
+			current_dataset_size += 1
+			accuracy_check_passed = 0
+
+	return -1
+
+# Attempt to find a minimal random dataset size and print it out.
+minimal_dataset_size = find_minimal_random_dataset_size(accuracy_check_passes=3)
+print("Minimal optimal dataset size: " + str(minimal_dataset_size))
+
 # Generates a dataset of randomly generated matrices, with (pseudo-)equal chances of being an 'I' or 'L'. The parameter passed is how many matrices to generate for the dataset.
-dataset = generate_random_dataset(100)
+dataset = generate_random_dataset(20)
 
 # Generates a dataset which contains every possible 'I' and 'L'
 # dataset = generate_minimal_complete_dataset()
@@ -214,10 +256,9 @@ if shuffle_dataset:
 	random.shuffle(dataset)
 
 if number_of_folds > len(dataset):
-	number_of_folds = len(dataset)
-	print("Reduced number of folds to be equal to the amount of elements in dataset, which is " + str(number_of_folds))
+	print("Reduced number of folds to be equal to the amount of elements in dataset, which is " + str(len(dataset)))
 
-# Evaluate the Perceptron algorithm passing in the generated dataset and the various parameters related to the Perceptron.
-scores = evaluate_algorithm(dataset, perceptron, number_of_folds, learning_rate, number_of_epochs)
+# Evaluate the Perceptron algorithm passing in the generated dataset and the various parameters related to the Perceptron. Take the minimal value between the size of the dataset and the number of d folds we are attempting to have to avoid an exception.
+scores = evaluate_algorithm(dataset, perceptron, min(len(dataset), number_of_folds), learning_rate, number_of_epochs)
 print('Scores: %s' % scores)
 print('Mean Accuracy: %.3f%%' % (sum(scores) / float(len(scores))))
