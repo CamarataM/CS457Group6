@@ -29,11 +29,19 @@ def accuracy_metric(actual, predicted):
 
 # Evaluate an algorithm using a cross validation split
 def evaluate_algorithm(dataset, algorithm, n_folds, *args):
-	folds = cross_validation_split(dataset, n_folds)
+	# Create a single initial fold with just the dataset.
+	folds = [dataset]
+
+	if use_folds:
+		folds = cross_validation_split(dataset, n_folds)
+
 	scores = list()
 	for fold in folds:
 		train_set = list(folds)
-		train_set.remove(fold)
+
+		if use_folds:
+			train_set.remove(fold)
+
 		train_set = sum(train_set, [])
 		test_set = list()
 		for row in fold:
@@ -42,6 +50,10 @@ def evaluate_algorithm(dataset, algorithm, n_folds, *args):
 			row_copy[-1] = None
 		predicted = algorithm(train_set, test_set, *args)
 		actual = [row[-1] for row in fold]
+
+		# print(str(predicted))
+		# print(str(actual))
+
 		accuracy = accuracy_metric(actual, predicted)
 		scores.append(accuracy)
 
@@ -123,17 +135,20 @@ def print_dataset_matrix_form(dataset : List[int]):
 
 random.seed(1)
 
+# Controls whether folds should be used at all, or if the Perceptron should just be trained and ran on the same dataset.
+use_folds = False
+
 # Determines how many pools the dataset is broken into, with the first being considered the "training" dataset.
-number_of_folds = 3
+number_of_folds = 1
 
 # Determines how fast the Perceptron will adjust the weights.
 learning_rate = 0.01
 
-# Controls how many times the Perceptron should be ran over a specific dataset.
-number_of_epochs = 500
+# Controls how many times the Perceptron should be ran over a specific dataset during training. More epoch iterations will result in more over-fitting.
+number_of_epochs = 1
 
 # Controls the diameter (width and height) of the dataset matrices.
-matrix_width = 5
+matrix_width = 3
 
 # Controls if for random dataset generation if 'L' matrices should be checked for being valid or not. Since this is mathematically controlled, this is not technically necessary, but ensures that any strange behaviour is caught.
 verify_l_shape = True
@@ -147,12 +162,33 @@ print_weights = False
 I_MATRIX_TRUTH_VALUE = 0
 L_MATRIX_TRUTH_VALUE = 1
 
-def generate_random_dataset(dataset_size : int):
+def verify_l_shape(matrix : List[int], expected_l_tails : int):
+	counted_l_tails = 0
+	for i in range(len(matrix)):
+		# Count the amount of 'L' tails the matrix list has. If this is equal to 0, then we have a malformed dataset array for the 'L' shape.
+		if matrix[i] == 1 and i + 1 < len(matrix) and matrix[i + 1] == 1:
+			counted_l_tails += 1
+
+	# If the counted 'L' tails is not equal to the expected generated value, print an error and exit the program.
+	if counted_l_tails != expected_l_tails:
+		raise Exception("Invalid 'L' dataset array, counted 'L' tails not equal to generated value (Counted: " + str(counted_l_tails) + ", Expected: " + str(expected_l_tails) + "). Dataset: " + str(matrix))
+
+# Generates a dataset with a set number of 'I' and 'L' matrices with random shifts.
+def generate_dataset(i_matrix_count : int, l_matrix_count : int):
 	dataset = []
 
-	for _ in range(dataset_size):
-		# Will randomly generate whether the dataset produced will be an 'I' or an 'L' by setting the amount of tails for the matrix to '0' or '1' respectively.
-		l_tails = random.randrange(0, 2)
+	for _ in range(i_matrix_count + l_matrix_count):
+		# Set the amount of tails initially to 1 to generate an 'L', else if i_matrix_count is greater than 0, set it to 0 to generate an 'I' matrix.
+		l_tails = 1
+
+		# If we still have 'I' matrices to produce, set the amount of tails to zero and decrement the i_matrix_count
+		if i_matrix_count > 0:
+			l_tails = 0
+			i_matrix_count -= 1
+		else:
+			# Not strictly necessary, more added for completion.
+			l_matrix_count -= 1
+
 		is_l = l_tails > 0
 
 		max_shift = matrix_width
@@ -164,16 +200,9 @@ def generate_random_dataset(dataset_size : int):
 		# Generate a new dataset with a random shift between 0 and the max shift variable.
 		new_dataset_matrix = generate_matrix(matrix_width, l_tails, random.randrange(0, max_shift))
 
+		# Verify the shape if required.
 		if verify_l_shape and is_l:
-			counted_l_tails = 0
-			for i in range(len(new_dataset_matrix)):
-				# Count the amount of 'L' tails the matrix list has. If this is equal to 0, then we have a malformed dataset array for the 'L' shape.
-				if new_dataset_matrix[i] == 1 and i + 1 < len(new_dataset_matrix) and new_dataset_matrix[i + 1] == 1:
-					counted_l_tails += 1
-
-			# If the counted 'L' tails is not equal to the expected generated value, print an error and exit the program.
-			if counted_l_tails != l_tails:
-				raise Exception("Invalid 'L' dataset array, counted 'L' tails not equal to generated value (Counted: " + str(counted_l_tails) + ", Expected: " + str(l_tails) + "). Dataset: " + str(new_dataset_matrix))
+			verify_l_shape(new_dataset_matrix, l_tails)
 
 		# Append to the end whether the resulting dataset is an 'I' or an 'L', required for the Perceptron to check whether the produced output was correct or not.
 		new_dataset_matrix.append(L_MATRIX_TRUTH_VALUE if is_l else I_MATRIX_TRUTH_VALUE)
@@ -183,6 +212,12 @@ def generate_random_dataset(dataset_size : int):
 
 	return dataset
 
+# Generate a dataset with a random number of 'I' and 'L' matrices.
+def generate_random_dataset(dataset_size : int):
+	i_matrix_count = random.randint(0, dataset_size)
+	return generate_dataset(i_matrix_count=i_matrix_count, l_matrix_count=dataset_size - i_matrix_count)
+
+# Generates a dataset with the minimal amount of 'I' and 'L' matrices to have complete coverage of all possible combinations.
 def generate_minimal_complete_dataset():
 	dataset = []
 
@@ -244,15 +279,19 @@ def find_minimal_random_dataset_size(optimal_accuracy_threshold = 0.99, accuracy
 	return -1
 
 # Attempt to find a minimal random dataset size and print it out.
-minimal_dataset_size = find_minimal_random_dataset_size(accuracy_check_passes=3)
-print("Minimal optimal dataset size: " + str(minimal_dataset_size))
+# minimal_dataset_size = find_minimal_random_dataset_size(optimal_accuracy_threshold=0.9, accuracy_check_passes=1, minimum_dataset_size=10, maximum_dataset_size=500)
+# print("Minimal optimal dataset size: " + str(minimal_dataset_size))
 
 # Generates a dataset of randomly generated matrices, with (pseudo-)equal chances of being an 'I' or 'L'. The parameter passed is how many matrices to generate for the dataset.
-dataset = generate_random_dataset(20)
+# dataset = generate_random_dataset(20)
 
 # Generates a dataset which contains every possible 'I' and 'L'
 # dataset = generate_minimal_complete_dataset()
 
+# Generates a dataset with a fixed number of 'I' and 'L' matrices with random shift values (including duplicates).
+dataset = generate_dataset(20, 20)
+
+# Shuffle the dataset if required.
 if shuffle_dataset:
 	random.shuffle(dataset)
 
