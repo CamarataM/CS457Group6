@@ -139,7 +139,7 @@ random.seed(1)
 use_folds = False
 
 # Determines how many pools the dataset is broken into, with the first being considered the "training" dataset.
-number_of_folds = 1
+number_of_folds = 2
 
 # Determines how fast the Perceptron will adjust the weights.
 learning_rate = 0.01
@@ -278,27 +278,98 @@ def find_minimal_random_dataset_size(optimal_accuracy_threshold = 0.99, accuracy
 
 	return -1
 
+# Tests a specific dataset.
+def test_dataset(dataset : List[int]):
+	# Shuffle the dataset if required.
+	if shuffle_dataset:
+		random.shuffle(dataset)
+
+	if number_of_folds > len(dataset):
+		print("Reduced number of folds to be equal to the amount of elements in dataset, which is " + str(len(dataset)))
+
+	# Evaluate the Perceptron algorithm passing in the generated dataset and the various parameters related to the Perceptron. Take the minimal value between the size of the dataset and the number of d folds we are attempting to have to avoid an exception.
+	scores = evaluate_algorithm(dataset, perceptron, min(len(dataset), number_of_folds), learning_rate, number_of_epochs)
+	accuracy = sum(scores) / float(len(scores))
+
+	return (accuracy, scores)
+
 # Attempt to find a minimal random dataset size and print it out.
-# minimal_dataset_size = find_minimal_random_dataset_size(optimal_accuracy_threshold=0.9, accuracy_check_passes=1, minimum_dataset_size=10, maximum_dataset_size=500)
+# minimal_dataset_size = find_minimal_random_dataset_size(optimal_accuracy_threshold=0.95, accuracy_check_passes=1, minimum_dataset_size=10, maximum_dataset_size=500)
 # print("Minimal optimal dataset size: " + str(minimal_dataset_size))
 
 # Generates a dataset of randomly generated matrices, with (pseudo-)equal chances of being an 'I' or 'L'. The parameter passed is how many matrices to generate for the dataset.
-# dataset = generate_random_dataset(20)
+dataset = generate_random_dataset(20)
 
 # Generates a dataset which contains every possible 'I' and 'L'
 # dataset = generate_minimal_complete_dataset()
 
 # Generates a dataset with a fixed number of 'I' and 'L' matrices with random shift values (including duplicates).
-dataset = generate_dataset(20, 20)
+# dataset = generate_dataset(12, 12)
 
-# Shuffle the dataset if required.
-if shuffle_dataset:
-	random.shuffle(dataset)
+dataset_test_cases = []
 
-if number_of_folds > len(dataset):
-	print("Reduced number of folds to be equal to the amount of elements in dataset, which is " + str(len(dataset)))
+# Contains a list of tuples representing how many 'I' and 'L' matrices to produce with random shifts. Each will be tested with the accuracy being printed to the console.
+# dataset_test_cases = [
+# 	(1, 1),
+# 	(5, 5),
+# 	(10, 10),
+# 	(1, 100),
+# 	(10, 100),
+# 	(12, 12),
+# 	(25, 25),
+# 	(50, 50),
+# 	(75, 75),
+# 	(76, 76),
+# 	(100, 100),
+# 	(5000, 5000)
+# ]
 
-# Evaluate the Perceptron algorithm passing in the generated dataset and the various parameters related to the Perceptron. Take the minimal value between the size of the dataset and the number of d folds we are attempting to have to avoid an exception.
-scores = evaluate_algorithm(dataset, perceptron, min(len(dataset), number_of_folds), learning_rate, number_of_epochs)
-print('Scores: %s' % scores)
-print('Mean Accuracy: %.3f%%' % (sum(scores) / float(len(scores))))
+# Contains a list of tuples representing how many 'I' and 'L' matrices to produce with random shifts to test with the learning rate test cases.
+learning_rate_dataset_test_cases = [
+	(1, 1),
+	(10, 10),
+	(25, 25),
+	(25, 75),
+	(50, 50),
+]
+
+# Contains a list of learning rates to test.
+learning_rate_test_cases = [
+	0.00001,
+	0.1,
+	0.25,
+	0.5,
+	0.75,
+	1
+]
+
+print("Learning Rate: " + str(learning_rate))
+if dataset_test_cases != None and len(dataset_test_cases) > 0:
+	for dataset_test_case in dataset_test_cases:
+		dataset = generate_dataset(dataset_test_case[0], dataset_test_case[1])
+		accuracy, scores = test_dataset(dataset)
+
+		print(str(dataset_test_case[0]) + " I, " + str(dataset_test_case[1]) + " L. Accuracy: %.3f%%" % (accuracy))
+else:
+	accuracy, scores = test_dataset(dataset)
+	print('Scores: %s' % scores)
+	print('Mean Accuracy: %.3f%%' % (accuracy))
+
+print("")
+
+if learning_rate_dataset_test_cases != None and len(learning_rate_dataset_test_cases) > 0:
+	original_learning_rate = learning_rate
+
+	for learning_rate_test_case in learning_rate_test_cases:
+		learning_rate = learning_rate_test_case
+		print("Learning Rate: " + str(learning_rate))
+		for dataset_test_case in learning_rate_dataset_test_cases:
+			dataset = generate_dataset(dataset_test_case[0], dataset_test_case[1])
+			accuracy, scores = test_dataset(dataset)
+
+			print(str(dataset_test_case[0]) + " I, " + str(dataset_test_case[1]) + " L. Accuracy: %.3f%%" % (accuracy))
+
+		if learning_rate != learning_rate_test_cases[-1]:
+			print("")
+
+	learning_rate = original_learning_rate
