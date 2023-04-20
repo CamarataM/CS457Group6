@@ -65,6 +65,8 @@ def predict(row, weights):
 	for i in range(len(row)-1):
 		activation += weights[i + 1] * row[i]
 
+	# print(str(activation))
+
 	return 1.0 if activation >= 0.0 else 0.0
 
 # Estimate Perceptron weights using stochastic gradient descent
@@ -95,28 +97,41 @@ def perceptron(train, test, l_rate, n_epoch):
 
 	return(predictions)
 
-# Creates a linear array which contains either an 'I' or an 'L' depending on if 'l_tails' is greater than 0. 'right_shift' will shift the starting point for the 'I' or 'L' either left for negative values or right for positive values.
-def generate_matrix(width : int, l_tails = 0, right_shift = 0):
+# The bottom line of the 'L' is called an 'arm' or 'horizontal bar' depending on where you look, see https://en.wikipedia.org/wiki/Typeface_anatomy and https://graphicdesign.stackexchange.com/questions/156812/typography-what-is-the-bottom-end-of-the-l-called and https://english.stackexchange.com/questions/583162/words-for-the-long-and-short-parts-of-the-letter-l
+
+# Creates a linear array which contains either an 'I' or an 'L' depending on if 'l_arms' is greater than 0. 'right_shift' will shift the starting point for the 'I' or 'L' either left for negative values or right for positive values.
+def generate_matrix(width : int, character_height = -1, l_arms = 0, right_shift = 0):
 	dataset_max = (width * width) + 1
 	dataset = [0] * dataset_max
 
+	# The minimum character height is 2, so it lock it to values equal to or greater than that.
+	character_height = max(character_height, 2)
+
 	next_1_index = right_shift % width
+	# Calculate how many elements we need to skip to get a character of the specified height.
+	skip_elements = max(width - character_height, 0) * width
 	for i in range(dataset_max):
-		if next_1_index == 0:
+		# If we have elements to skip, restart the loop.
+		if skip_elements > 0:
+			skip_elements -= 1
+			continue
+
+		if next_1_index <= 0:
 			dataset[i] = 1
 			next_1_index = width
 
 		next_1_index -= 1
 
 	for i in reversed(range(dataset_max - 1)):
-		if l_tails <= 0:
+		if l_arms <= 0:
 			break
 
 		if dataset[i] == 1:
 			dataset[i + 1] = 1
-			l_tails -= 1
+			l_arms -= 1
 
-	dataset[len(dataset) - 1] = -1
+	# Set the final value of the dataset equal to the constant value.
+	dataset[len(dataset) - 1] = FIXED_VALUE
 
 	return dataset
 
@@ -136,7 +151,7 @@ def print_dataset_matrix_form(dataset : List[int]):
 random.seed(1)
 
 # Controls whether folds should be used at all, or if the Perceptron should just be trained and ran on the same dataset.
-use_folds = False
+use_folds = True
 
 # Determines how many pools the dataset is broken into, with the first being considered the "training" dataset.
 number_of_folds = 2
@@ -148,10 +163,10 @@ learning_rate = 0.01
 number_of_epochs = 1
 
 # Controls the diameter (width and height) of the dataset matrices.
-matrix_width = 3
+matrix_width = 5
 
 # Controls if for random dataset generation if 'L' matrices should be checked for being valid or not. Since this is mathematically controlled, this is not technically necessary, but ensures that any strange behaviour is caught.
-verify_l_shape = True
+do_verify_l_shape = True
 
 # Controls whether dataset order is shuffled or not.
 shuffle_dataset = True
@@ -161,48 +176,49 @@ print_weights = False
 # Set which value corresponds to which matrices for the truth values.
 I_MATRIX_TRUTH_VALUE = 0
 L_MATRIX_TRUTH_VALUE = 1
+FIXED_VALUE = -1
 
-def verify_l_shape(matrix : List[int], expected_l_tails : int):
-	counted_l_tails = 0
+def verify_l_shape(matrix : List[int], expected_l_arms : int):
+	counted_l_arms = 0
 	for i in range(len(matrix)):
-		# Count the amount of 'L' tails the matrix list has. If this is equal to 0, then we have a malformed dataset array for the 'L' shape.
+		# Count the amount of 'L' arms the matrix list has. If this is equal to 0, then we have a malformed dataset array for the 'L' shape.
 		if matrix[i] == 1 and i + 1 < len(matrix) and matrix[i + 1] == 1:
-			counted_l_tails += 1
+			counted_l_arms += 1
 
-	# If the counted 'L' tails is not equal to the expected generated value, print an error and exit the program.
-	if counted_l_tails != expected_l_tails:
-		raise Exception("Invalid 'L' dataset array, counted 'L' tails not equal to generated value (Counted: " + str(counted_l_tails) + ", Expected: " + str(expected_l_tails) + "). Dataset: " + str(matrix))
+	# If the counted 'L' arms is not equal to the expected generated value, print an error and exit the program.
+	if counted_l_arms != expected_l_arms:
+		raise Exception("Invalid 'L' dataset array, counted 'L' arms not equal to generated value (Counted: " + str(counted_l_arms) + ", Expected: " + str(expected_l_arms) + "). Dataset: " + str(matrix))
 
-# Generates a dataset with a set number of 'I' and 'L' matrices with random shifts.
+# Generates a dataset with a set number of 'I' and 'L' matrices with random shifts and heights.
 def generate_dataset(i_matrix_count : int, l_matrix_count : int):
 	dataset = []
 
 	for _ in range(i_matrix_count + l_matrix_count):
-		# Set the amount of tails initially to 1 to generate an 'L', else if i_matrix_count is greater than 0, set it to 0 to generate an 'I' matrix.
-		l_tails = 1
+		# Set the amount of arms initially to 1 to generate an 'L', else if i_matrix_count is greater than 0, set it to 0 to generate an 'I' matrix.
+		l_arms = 1
 
-		# If we still have 'I' matrices to produce, set the amount of tails to zero and decrement the i_matrix_count
+		# If we still have 'I' matrices to produce, set the amount of arms to zero and decrement the i_matrix_count
 		if i_matrix_count > 0:
-			l_tails = 0
+			l_arms = 0
 			i_matrix_count -= 1
 		else:
 			# Not strictly necessary, more added for completion.
 			l_matrix_count -= 1
 
-		is_l = l_tails > 0
+		is_l = l_arms > 0
 
 		max_shift = matrix_width
 
-		# If the matrix is an 'L' shape, the maximum shift we can do is the width of the matrix - 1, as anything more will cut the tail off.
+		# If the matrix is an 'L' shape, the maximum shift we can do is the width of the matrix - 1, as anything more will cut the arm off.
 		if is_l:
 			max_shift = matrix_width - 1
 
 		# Generate a new dataset with a random shift between 0 and the max shift variable.
-		new_dataset_matrix = generate_matrix(matrix_width, l_tails, random.randrange(0, max_shift))
+		new_dataset_matrix = generate_matrix(width=matrix_width, l_arms=l_arms, right_shift=random.randrange(0, max_shift))
 
 		# Verify the shape if required.
-		if verify_l_shape and is_l:
-			verify_l_shape(new_dataset_matrix, l_tails)
+		if do_verify_l_shape and is_l:
+			verify_l_shape(new_dataset_matrix, l_arms)
 
 		# Append to the end whether the resulting dataset is an 'I' or an 'L', required for the Perceptron to check whether the produced output was correct or not.
 		new_dataset_matrix.append(L_MATRIX_TRUTH_VALUE if is_l else I_MATRIX_TRUTH_VALUE)
@@ -298,7 +314,7 @@ def test_dataset(dataset : List[int]):
 # print("Minimal optimal dataset size: " + str(minimal_dataset_size))
 
 # Generates a dataset of randomly generated matrices, with (pseudo-)equal chances of being an 'I' or 'L'. The parameter passed is how many matrices to generate for the dataset.
-dataset = generate_random_dataset(20)
+# dataset = generate_random_dataset(20)
 
 # Generates a dataset which contains every possible 'I' and 'L'
 # dataset = generate_minimal_complete_dataset()
@@ -306,23 +322,26 @@ dataset = generate_random_dataset(20)
 # Generates a dataset with a fixed number of 'I' and 'L' matrices with random shift values (including duplicates).
 # dataset = generate_dataset(12, 12)
 
-dataset_test_cases = []
+# dataset_test_cases = []
 
 # Contains a list of tuples representing how many 'I' and 'L' matrices to produce with random shifts. Each will be tested with the accuracy being printed to the console.
-# dataset_test_cases = [
-# 	(1, 1),
-# 	(5, 5),
-# 	(10, 10),
-# 	(1, 100),
-# 	(10, 100),
-# 	(12, 12),
-# 	(25, 25),
-# 	(50, 50),
-# 	(75, 75),
-# 	(76, 76),
-# 	(100, 100),
-# 	(5000, 5000)
-# ]
+dataset_test_cases = [
+	(1, 1),
+	(5, 5),
+	(10, 10),
+	(1, 100),
+	(10, 100),
+	(12, 12),
+	(25, 25),
+	(50, 50),
+	(75, 75),
+	(76, 76),
+	(100, 100),
+	(250, 250),
+	(500, 500),
+	(1000, 1000),
+	(5000, 5000)
+]
 
 # Contains a list of tuples representing how many 'I' and 'L' matrices to produce with random shifts to test with the learning rate test cases.
 learning_rate_dataset_test_cases = [
@@ -331,6 +350,7 @@ learning_rate_dataset_test_cases = [
 	(25, 25),
 	(25, 75),
 	(50, 50),
+	(100, 100),
 ]
 
 # Contains a list of learning rates to test.
@@ -344,6 +364,7 @@ learning_rate_test_cases = [
 ]
 
 print("Learning Rate: " + str(learning_rate))
+print("Matrix Size: " + str(matrix_width) + " x " + str(matrix_width))
 if dataset_test_cases != None and len(dataset_test_cases) > 0:
 	for dataset_test_case in dataset_test_cases:
 		dataset = generate_dataset(dataset_test_case[0], dataset_test_case[1])
