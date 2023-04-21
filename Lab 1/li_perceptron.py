@@ -100,60 +100,62 @@ def perceptron(train, test, l_rate, n_epoch):
 # The bottom line of the 'L' is called an 'arm' or 'horizontal bar' depending on where you look, see https://en.wikipedia.org/wiki/Typeface_anatomy and https://graphicdesign.stackexchange.com/questions/156812/typography-what-is-the-bottom-end-of-the-l-called and https://english.stackexchange.com/questions/583162/words-for-the-long-and-short-parts-of-the-letter-l
 
 # Creates a linear array which contains either an 'I' or an 'L' depending on if 'l_arms' is greater than 0. 'right_shift' will shift the starting point for the 'I' or 'L' either left for negative values or right for positive values.
-def generate_matrix(width : int, character_height = -1, l_arms = 0, right_shift = 0):
-	dataset_max = (width * width) + 1
-	dataset = [0] * dataset_max
+def generate_matrix(width : int, character_height = -1, l_arms = 0, down_shift = 0, right_shift = 0):
+	matrix_list_length = (width * width) + 1
+	matrix = [0] * matrix_list_length
 
 	# The minimum character height is 2, so it lock it to values equal to or greater than that.
 	character_height = max(character_height, 2)
 
-	next_1_index = right_shift % width
-	# Calculate how many elements we need to skip to get a character of the specified height.
-	skip_elements = max(width - character_height, 0) * width
-	for i in range(dataset_max):
-		# If we have elements to skip, restart the loop.
-		if skip_elements > 0:
-			skip_elements -= 1
-			continue
+	# Calculate the character starting index, which is equal to the amount of positions to shift to the right plus the amount of down shifts times the width of the matrix.
+	starting_index = right_shift + (down_shift * width)
 
-		if next_1_index <= 0:
-			dataset[i] = 1
-			next_1_index = width
+	# The first index we need to put a one is equal to the starting index, meaning we will skip over all elements until we reach it.
+	next_1_index = starting_index
 
-		next_1_index -= 1
+	for i in range(matrix_list_length):
+		# If we still have characters to calculate, check if the index is the next one index. If it is, set it to one and decrement the character height by one.
+		if character_height > 0:
+			if next_1_index <= 0:
+				matrix[i] = 1
+				next_1_index = width
+				character_height -= 1
 
-	for i in reversed(range(dataset_max - 1)):
+			next_1_index -= 1
+
+	# Reverse the dataset array, then for every one while we still have l_arms to place, set the next element in the array equal to one.
+	for i in reversed(range(matrix_list_length - 1)):
 		if l_arms <= 0:
 			break
 
-		if dataset[i] == 1:
-			dataset[i + 1] = 1
+		if matrix[i] == 1:
+			matrix[i + 1] = 1
 			l_arms -= 1
 
 	# Set the final value of the dataset equal to the constant value.
-	dataset[len(dataset) - 1] = FIXED_VALUE
+	matrix[len(matrix) - 1] = FIXED_VALUE
 
-	return dataset
+	return matrix
 
-# Prints a dataset matrix in a more human-readable form.
-def print_dataset_matrix_form(dataset : List[int]):
+# Prints a matrix array in a more human-readable form.
+def print_array_matrix_form(matrix : List[int]):
 	current_string = ""
-	wrap_modulus = int(sqrt(len(dataset) - 1))
-	for i in range(len(dataset)):
+	wrap_modulus = int(sqrt(len(matrix) - 1))
+	for i in range(len(matrix)):
 		if i != 0 and i % wrap_modulus == 0:
 			print(current_string)
 			current_string = ""
 
-		current_string += str(dataset[i]) + " "
+		current_string += str(matrix[i]) + " "
 
 	print(current_string)
 
 random.seed(1)
 
 # Controls whether folds should be used at all, or if the Perceptron should just be trained and ran on the same dataset.
-use_folds = True
+use_folds = False
 
-# Determines how many pools the dataset is broken into, with the first being considered the "training" dataset.
+# Determines how many pools the dataset is broken into, with the first being considered the "training" dataset. Should be greater than or equal to 2.
 number_of_folds = 2
 
 # Determines how fast the Perceptron will adjust the weights.
@@ -163,13 +165,22 @@ learning_rate = 0.01
 number_of_epochs = 1
 
 # Controls the diameter (width and height) of the dataset matrices.
-matrix_width = 5
+matrix_width = 3
 
-# Controls if for random dataset generation if 'L' matrices should be checked for being valid or not. Since this is mathematically controlled, this is not technically necessary, but ensures that any strange behaviour is caught.
+# Controls if for random dataset generation if 'L' matrices should be checked for being valid or not. Since this is mathematically controlled, this is not technically necessary, but ensures that any strange behavior is caught.
 do_verify_l_shape = True
 
 # Controls whether dataset order is shuffled or not.
 shuffle_dataset = True
+
+# Controls whether the random matrices should have random down shifts.
+random_down_shifts = True
+
+# Controls whether the random matrices should have random right shifts.
+random_right_shifts = True
+
+# Controls whether the random matrices should have random character heights.
+random_character_heights = True
 
 print_weights = False
 
@@ -207,14 +218,31 @@ def generate_dataset(i_matrix_count : int, l_matrix_count : int):
 
 		is_l = l_arms > 0
 
-		max_shift = matrix_width
+		character_height = matrix_width
+
+		if random_character_heights:
+			# Generate a random character height between 2 (the minimum) and the total width of the matrix.
+			character_height = random.randrange(2, matrix_width)
+
+		down_shift = 0
+		right_shift = 0
+
+		maximum_down_shift = matrix_width - character_height
+		maximum_right_shift = matrix_width
 
 		# If the matrix is an 'L' shape, the maximum shift we can do is the width of the matrix - 1, as anything more will cut the arm off.
 		if is_l:
-			max_shift = matrix_width - 1
+			maximum_right_shift = matrix_width - 1
+
+		if random_down_shifts:
+			# The maximum amount of positions we can shift down is equal to the height of the matrix minus the height of the character.
+			down_shift = random.randrange(0, maximum_down_shift)
+
+		if random_right_shifts:
+			right_shift = random.randrange(0, maximum_right_shift)
 
 		# Generate a new dataset with a random shift between 0 and the max shift variable.
-		new_dataset_matrix = generate_matrix(width=matrix_width, l_arms=l_arms, right_shift=random.randrange(0, max_shift))
+		new_dataset_matrix = generate_matrix(width=matrix_width, character_height=character_height, l_arms=l_arms, down_shift=down_shift, right_shift=right_shift)
 
 		# Verify the shape if required.
 		if do_verify_l_shape and is_l:
@@ -233,69 +261,8 @@ def generate_random_dataset(dataset_size : int):
 	i_matrix_count = random.randint(0, dataset_size)
 	return generate_dataset(i_matrix_count=i_matrix_count, l_matrix_count=dataset_size - i_matrix_count)
 
-# Generates a dataset with the minimal amount of 'I' and 'L' matrices to have complete coverage of all possible combinations.
-def generate_minimal_complete_dataset():
-	dataset = []
-
-	# Generate all possible 'I' values, which is all 'I' shifted to the right 0 through matrix width amount of times.
-	for right_shift in range(matrix_width):
-		new_dataset_matrix = generate_matrix(matrix_width, 0, right_shift)
-
-		# Append a 0 to indicate that this is an 'I' matrix.
-		new_dataset_matrix.append(I_MATRIX_TRUTH_VALUE)
-
-		# Append the new dataset to the dataset list.
-		dataset.append(new_dataset_matrix)
-
-	# Generate all possible 'L' values, which is all 'L' shifted to the right 0 through matrix width minus one amount of times.
-	for right_shift in range(matrix_width - 1):
-		new_dataset_matrix = generate_matrix(matrix_width, 1, right_shift)
-
-		# Append a 1 to indicate that this is an 'L' matrix.
-		new_dataset_matrix.append(L_MATRIX_TRUTH_VALUE)
-		
-		# Append the new dataset to the dataset list.
-		dataset.append(new_dataset_matrix)
-
-	return dataset
-
-# Will attempt to find the optimal dataset size given an optimal accuracy threshold which much be matched or exceeded, the amount of times to check a dataset for accuracy validity, and a minimum and maximum dataset size.
-def find_minimal_random_dataset_size(optimal_accuracy_threshold = 0.99, accuracy_check_passes = 1, minimum_dataset_size = 10, maximum_dataset_size = 100):
-	current_dataset_size = minimum_dataset_size
-	accuracy_check_passed = 0
-
-	# Continue checking new dataset sizes while the current dataset size is less than or equal to the maximum dataset size.
-	while current_dataset_size <= maximum_dataset_size:
-		# Generate and evaluate the current dataset.
-		dataset = generate_random_dataset(current_dataset_size)
-		scores = evaluate_algorithm(dataset, perceptron, min(len(dataset), number_of_folds), learning_rate, number_of_epochs)
-
-		# Calculate the accuracy of the weights.
-		accuracy = sum(scores) / float(len(scores)) / 100
-
-		# Check if the accuracy of the current weights is greater than or equal to the optimal accuracy threshold...
-		if accuracy >= optimal_accuracy_threshold:
-			# ... if greater than or equal than the accuracy threshold, increment the check passes.
-			accuracy_check_passed += 1
-
-			if accuracy_check_passes > 1:
-				print(str(current_dataset_size) + " passed an accuracy check. " + str(accuracy_check_passed) + "/" + str(accuracy_check_passes) + " successful passes.")
-
-			# If we passed the required amount of accuracy check passes, return the found "optimal" size.
-			if accuracy_check_passed >= accuracy_check_passes:
-				return current_dataset_size
-		else:
-			# ...else if we failed an accuracy check, print a message if the current dataset size had passes already, incrementing the current dataset size.
-			if accuracy_check_passed > 0:
-				print(str(current_dataset_size) + " failed an accuracy check. Resetting passes.")
-
-			current_dataset_size += 1
-			accuracy_check_passed = 0
-
-	return -1
-
 # Tests a specific dataset.
-def test_dataset(dataset : List[int]):
+def test_dataset(dataset : List[List[int]]):
 	# Shuffle the dataset if required.
 	if shuffle_dataset:
 		random.shuffle(dataset)
@@ -309,10 +276,6 @@ def test_dataset(dataset : List[int]):
 
 	return (accuracy, scores)
 
-# Attempt to find a minimal random dataset size and print it out.
-# minimal_dataset_size = find_minimal_random_dataset_size(optimal_accuracy_threshold=0.95, accuracy_check_passes=1, minimum_dataset_size=10, maximum_dataset_size=500)
-# print("Minimal optimal dataset size: " + str(minimal_dataset_size))
-
 # Generates a dataset of randomly generated matrices, with (pseudo-)equal chances of being an 'I' or 'L'. The parameter passed is how many matrices to generate for the dataset.
 # dataset = generate_random_dataset(20)
 
@@ -322,7 +285,7 @@ def test_dataset(dataset : List[int]):
 # Generates a dataset with a fixed number of 'I' and 'L' matrices with random shift values (including duplicates).
 # dataset = generate_dataset(12, 12)
 
-# dataset_test_cases = []
+dataset = None
 
 # Contains a list of tuples representing how many 'I' and 'L' matrices to produce with random shifts. Each will be tested with the accuracy being printed to the console.
 dataset_test_cases = [
@@ -363,6 +326,12 @@ learning_rate_test_cases = [
 	1
 ]
 
+if dataset != None and len(dataset) > 0:
+	accuracy, scores = test_dataset(dataset)
+	print('Scores: %s' % scores)
+	print('Mean Accuracy: %.3f%%' % (accuracy))
+	print("")
+
 print("Learning Rate: " + str(learning_rate))
 print("Matrix Size: " + str(matrix_width) + " x " + str(matrix_width))
 if dataset_test_cases != None and len(dataset_test_cases) > 0:
@@ -371,10 +340,6 @@ if dataset_test_cases != None and len(dataset_test_cases) > 0:
 		accuracy, scores = test_dataset(dataset)
 
 		print(str(dataset_test_case[0]) + " I, " + str(dataset_test_case[1]) + " L. Accuracy: %.3f%%" % (accuracy))
-else:
-	accuracy, scores = test_dataset(dataset)
-	print('Scores: %s' % scores)
-	print('Mean Accuracy: %.3f%%' % (accuracy))
 
 print("")
 
