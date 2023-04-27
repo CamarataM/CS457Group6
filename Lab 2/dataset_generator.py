@@ -62,10 +62,21 @@ def generate_dataset(output_file_path : str, dataset_size : int):
 
 		write()
 
-		# TODO: Implement automatic padding to column-align type values.
-		write(ATTRIBUTE + " x  " + NUMERIC)
-		write(ATTRIBUTE + " y  " + NUMERIC)
-		write(ATTRIBUTE + " output  " + NUMERIC)
+		# TODO: Switch to dict(), linking string attributes to string types instead of assuming NUMERIC.
+		attributes = ["x", "y", "output"]
+
+		# Grab the maximum padding for the longest string, then left-pad every string with spaces to that length.
+		padding = 0
+		for attribute in attributes:
+			padding = max(padding, len(attribute))
+
+		for i in range(len(attributes)):
+			attributes[i] = attributes[i].ljust(padding)
+
+		for attribute in attributes:
+			write(ATTRIBUTE + " " + attribute + "  " + NUMERIC)
+
+		write()
 
 		write(DATA)
 
@@ -86,14 +97,3 @@ assert is_inclusive(y_lower_range, y_upper_range)
 assert within_epsilon(calculate_function(84, 76), 9.46142833149)
 
 generate_dataset("test.arff", 10)
-
-# for i in range(10):
-# 	x = random_x()
-# 	y = random_y()
-
-# 	print("X: " + str(x))
-# 	print("Y: " + str(y))
-
-# 	print(calculate_function(x, y))
-
-# 	print()
