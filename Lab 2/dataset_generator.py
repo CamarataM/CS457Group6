@@ -19,6 +19,10 @@ y_upper_range = 100
 use_fixed_value = True
 fixed_value = -1
 
+# TODO: Switch to dict() which supports key file paths and value dataset sizes. 
+dataset_output_file_path_list = ["training.arff", "test.arff"]
+dataset_size = 100
+
 def squared(number):
 	return math.pow(number, 2)
 
@@ -104,12 +108,18 @@ def generate_dataset(output_file_path : str, dataset_size : int):
 
 			write(output_string)
 
-# Ensure that the lower and upper range of x and y can produce the upper value (inclusive).
-assert is_inclusive(x_lower_range, x_upper_range)
-assert is_inclusive(y_lower_range, y_upper_range)
+def main():
+	# Ensure that the lower and upper range of x and y can produce the upper value (inclusive).
+	assert is_inclusive(x_lower_range, x_upper_range)
+	assert is_inclusive(y_lower_range, y_upper_range)
 
-# Validated by plugging sin(pi * 10 * 84 + 10/(1 + 76^2)) + ln(84^2 + 76^2) into Demos ( https://www.desmos.com/calculator )
-# Check that the calculate value distance from the expected value is less than 0.000000001.
-assert within_epsilon(calculate_function(84, 76), 9.46142833149)
+	# Validated by plugging sin(pi * 10 * 84 + 10/(1 + 76^2)) + ln(84^2 + 76^2) into Demos ( https://www.desmos.com/calculator )
+	# Check that the calculate value distance from the expected value is less than 0.000000001.
+	# TODO: Should likely automate this process rather than having a fixed, limited test set. Could use eval(), but this option was disregarded due to the dangers of eval() (see https://stackoverflow.com/a/9558001 ). One alternative would be numexpr ( https://github.com/pydata/numexpr ), although it is likely overkill for this application, so a "safe" eval alternative would probably be better.
+	assert within_epsilon(calculate_function(84, 76), 9.46142833149)
 
-generate_dataset("test.arff", 10)
+	for dataset_output_file_path in dataset_output_file_path_list:
+		generate_dataset(dataset_output_file_path, dataset_size)
+
+if __name__ == "__main__":
+	main()
