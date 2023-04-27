@@ -1,4 +1,5 @@
 import math
+import os
 import random
 # TODO: Could use the 'bigfloat' library to improve floating-point precision, see https://pypi.org/project/bigfloat/
 
@@ -20,7 +21,7 @@ use_fixed_value = True
 fixed_value = -1
 
 # TODO: Switch to dict() which supports key file paths and value dataset sizes. 
-dataset_output_file_path_list = ["training.arff", "test.arff"]
+dataset_output_file_path_list = ["datasets" + os.sep + "training.arff", "datasets" + os.sep + "test.arff"]
 dataset_size = 100
 
 def squared(number):
@@ -119,7 +120,7 @@ def main():
 	assert within_epsilon(calculate_function(84, 76), 9.46142833149)
 
 	for dataset_output_file_path in dataset_output_file_path_list:
-		generate_dataset(dataset_output_file_path, dataset_size)
+		generate_dataset(dataset_output_file_path.replace(".arff", "_" + str(dataset_size) + ".arff"), dataset_size)
 
 if __name__ == "__main__":
 	main()
