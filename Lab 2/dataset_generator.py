@@ -15,6 +15,10 @@ y_lower_range = 1
 # Inclusive
 y_upper_range = 100
 
+# Whether to append a fixed value to the dataset.
+use_fixed_value = True
+fixed_value = -1
+
 def squared(number):
 	return math.pow(number, 2)
 
@@ -63,7 +67,12 @@ def generate_dataset(output_file_path : str, dataset_size : int):
 		write()
 
 		# TODO: Switch to dict(), linking string attributes to string types instead of assuming NUMERIC.
-		attributes = ["x", "y", "output"]
+		attributes = ["x", "y"]
+
+		if use_fixed_value:
+			attributes.append("fixed_value")
+
+		attributes.append("output")
 
 		# Grab the maximum padding for the longest string, then left-pad every string with spaces to that length.
 		padding = 0
@@ -86,7 +95,14 @@ def generate_dataset(output_file_path : str, dataset_size : int):
 
 			output = calculate_function(x, y)
 
-			write(str(x) + "," + str(y) + "," + str(output))
+			output_string = str(x) + "," + str(y) + ","
+
+			if use_fixed_value:
+				output_string += str(fixed_value) + ","
+
+			output_string += str(output)
+
+			write(output_string)
 
 # Ensure that the lower and upper range of x and y can produce the upper value (inclusive).
 assert is_inclusive(x_lower_range, x_upper_range)
