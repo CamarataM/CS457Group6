@@ -117,7 +117,7 @@ def generate_dataset(output_file_path : str, dataset_size : int):
 		write(DATA)
 
 		dataset_lines : List[str] = []
-		if force_minimum_and_maximum_value:
+		if generate_random_range and force_minimum_and_maximum_value:
 			dataset_lines.append(generate_dataset_line(x_lower_range, y_lower_range))
 			dataset_lines.append(generate_dataset_line(x_upper_range, y_upper_range))
 
