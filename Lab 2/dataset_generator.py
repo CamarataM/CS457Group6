@@ -1,6 +1,8 @@
 import math
 import os
+from pathlib import Path
 import random
+from typing import List
 # TODO: Could use the 'bigfloat' library to improve floating-point precision, see https://pypi.org/project/bigfloat/
 
 # Fix the seed of random to make it deterministic.
@@ -20,9 +22,17 @@ y_upper_range = 100
 use_fixed_value = False
 fixed_value = -1
 
+# Whether to force the inclusion of the minimum and maximum values for x and y.
+force_minimum_and_maximum_value = True
+
+dataset_folder_path = "datasets"
+
 # TODO: Switch to dict() which supports key file paths and value dataset sizes. 
-dataset_output_file_path_list = ["datasets" + os.sep + "training.arff", "datasets" + os.sep + "test.arff"]
+dataset_output_file_path_list = [dataset_folder_path + os.sep + "training.arff", dataset_folder_path + os.sep + "test.arff"]
 dataset_sizes = [10, 100, 1000, 10000]
+
+generate_random_range = False
+generate_uniform_range = True
 
 def squared(number):
 	return math.pow(number, 2)
@@ -54,6 +64,18 @@ RELATION = "@RELATION"
 ATTRIBUTE = "@ATTRIBUTE"
 NUMERIC = "NUMERIC"
 DATA = "@DATA"
+
+def generate_dataset_line(x : float, y : float):
+	output = calculate_function(x, y)
+
+	output_string = str(x) + "," + str(y) + ","
+
+	if use_fixed_value:
+		output_string += str(fixed_value) + ","
+
+	output_string += str(output)
+
+	return output_string
 
 # ARFF Format Taken From 04/27/2023 11:13 AM: https://www.cs.waikato.ac.nz/ml/weka/arff.html
 def generate_dataset(output_file_path : str, dataset_size : int):
@@ -94,20 +116,39 @@ def generate_dataset(output_file_path : str, dataset_size : int):
 
 		write(DATA)
 
-		for _ in range(dataset_size):
-			x = random_x()
-			y = random_y()
+		dataset_lines : List[str] = []
+		if force_minimum_and_maximum_value:
+			dataset_lines.append(generate_dataset_line(x_lower_range, y_lower_range))
+			dataset_lines.append(generate_dataset_line(x_upper_range, y_upper_range))
 
-			output = calculate_function(x, y)
+		x = 0
+		y = 0
 
-			output_string = str(x) + "," + str(y) + ","
+		# If we are set to generate a uniform range, calculate the uniform offset by dividing the maximum range value by the dataset size.
+		x_y_offset = 0
+		if not generate_random_range and generate_uniform_range:
+			assert x_upper_range == y_upper_range
 
-			if use_fixed_value:
-				output_string += str(fixed_value) + ","
+			x_y_offset = max(x_upper_range, y_upper_range) / dataset_size
 
-			output_string += str(output)
+		# Generate random data lines to fill the rest of the dataset size.
+		for _ in range(dataset_size - len(dataset_lines)):
+			if generate_random_range:
+				x = random_x()
+				y = random_y()
 
-			write(output_string)
+			x += x_y_offset
+			y += x_y_offset
+
+			dataset_lines.append(generate_dataset_line(x, y))
+
+		assert len(dataset_lines) == dataset_size
+
+		# Shuffle the dataset lines.
+		random.shuffle(dataset_lines)
+
+		for dataset_line in dataset_lines:
+			write(dataset_line)
 
 def main():
 	# Ensure that the lower and upper range of x and y can produce the upper value (inclusive).
@@ -119,12 +160,21 @@ def main():
 	# TODO: Should likely automate this process rather than having a fixed, limited test set. Could use eval(), but this option was disregarded due to the dangers of eval() (see https://stackoverflow.com/a/9558001 ). One alternative would be numexpr ( https://github.com/pydata/numexpr ), although it is likely overkill for this application, so a "safe" eval alternative would probably be better.
 	assert within_epsilon(calculate_function(84, 76), 9.46142833149)
 
+	# Create the required output folder structure.
+	Path(dataset_folder_path).mkdir(parents=True, exist_ok=True)
+
 	for dataset_output_file_path in dataset_output_file_path_list:
 		for dataset_size in dataset_sizes:
 			output_file_path = dataset_output_file_path.replace(".arff", "_" + str(dataset_size) + ".arff")
 
 			if use_fixed_value:
 				output_file_path = output_file_path.replace(".arff", "_fixed.arff")
+
+			if generate_random_range:
+				output_file_path = output_file_path.replace(".arff", "_random.arff")
+
+			if generate_uniform_range:
+				output_file_path = output_file_path.replace(".arff", "_uniform.arff")
 
 			generate_dataset(output_file_path, dataset_size)
 
