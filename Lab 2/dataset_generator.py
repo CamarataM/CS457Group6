@@ -17,12 +17,12 @@ y_lower_range = 1
 y_upper_range = 100
 
 # Whether to append a fixed value to the dataset.
-use_fixed_value = True
+use_fixed_value = False
 fixed_value = -1
 
 # TODO: Switch to dict() which supports key file paths and value dataset sizes. 
 dataset_output_file_path_list = ["datasets" + os.sep + "training.arff", "datasets" + os.sep + "test.arff"]
-dataset_size = 100
+dataset_sizes = [10, 100, 1000, 10000]
 
 def squared(number):
 	return math.pow(number, 2)
@@ -120,7 +120,13 @@ def main():
 	assert within_epsilon(calculate_function(84, 76), 9.46142833149)
 
 	for dataset_output_file_path in dataset_output_file_path_list:
-		generate_dataset(dataset_output_file_path.replace(".arff", "_" + str(dataset_size) + ".arff"), dataset_size)
+		for dataset_size in dataset_sizes:
+			output_file_path = dataset_output_file_path.replace(".arff", "_" + str(dataset_size) + ".arff")
+
+			if use_fixed_value:
+				output_file_path = output_file_path.replace(".arff", "_fixed.arff")
+
+			generate_dataset(output_file_path, dataset_size)
 
 if __name__ == "__main__":
 	main()
