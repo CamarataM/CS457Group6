@@ -1,0 +1,24 @@
+% 1. Title: sin ln Function Dataset
+%
+% 2. Sources:
+%      (a) Creators: Michael Camarata, Ariesh Grover, Miguel Lima, Jaden Martinez
+%      (b) Donar: N/A
+%      (c) Date: April, 2023
+@RELATION math
+
+@ATTRIBUTE x            NUMERIC
+@ATTRIBUTE y            NUMERIC
+@ATTRIBUTE fixed_value  NUMERIC
+@ATTRIBUTE output       NUMERIC
+
+@DATA
+80.0,80.0,-1,9.458762705169864
+90.0,90.0,-1,9.69400093641114
+20.0,20.0,-1,6.709546798875932
+60.0,60.0,-1,8.884613307821853
+40.0,40.0,-1,8.077152144363899
+50.0,50.0,-1,8.52119158140204
+30.0,30.0,-1,7.506640495156584
+10.0,10.0,-1,5.397165581783785
+100.0,100.0,-1,9.90448745237909
+70.0,70.0,-1,9.192178063160933

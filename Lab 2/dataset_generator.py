@@ -25,14 +25,19 @@ fixed_value = -1
 # Whether to force the inclusion of the minimum and maximum values for x and y.
 force_minimum_and_maximum_value = True
 
+generate_random_range = True
+generate_uniform_range = False
+
 dataset_folder_path = "datasets"
+
+if use_fixed_value:
+	dataset_folder_path += os.sep + "fixed_value"
+else:
+	dataset_folder_path += os.sep + "no_fixed_value"
 
 # TODO: Switch to dict() which supports key file paths and value dataset sizes. 
 dataset_output_file_path_list = [dataset_folder_path + os.sep + "training.arff", dataset_folder_path + os.sep + "test.arff"]
 dataset_sizes = [10, 100, 1000, 10000]
-
-generate_random_range = False
-generate_uniform_range = True
 
 def squared(number):
 	return math.pow(number, 2)
